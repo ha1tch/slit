@@ -10,3 +10,6 @@ SQL for the most simple tasks.
 
 Dox here:
 https://raw.githubusercontent.com/vruz/slit/master/slitdoc.txt
+
+
+![slit screenshot](/slit-screenshot.png)
