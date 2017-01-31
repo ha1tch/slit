@@ -43,7 +43,7 @@ https://raw.githubusercontent.com/vruz/slit/master/slitdoc.txt
       When a flag is specified, it means that its value is on.
       When you need to turn it off use its --no-<option>
       counterpart. For example:  --no-rownumbers 
-      -p, --path=<s>        Directory path where the database resides (default: /home/vruz/.slit)
+      -p, --path=<s>        Directory path where the database resides (default: $HOME/.slit)
       -t, --table=<s>       Table name where data is stored (default: slitdata)
       -f, --format=<s>      Output data format. One of: [txt|tab|ascii|json|csv] (default: txt)
       -c, --columnlabels    Output column names in csv and txt formats
