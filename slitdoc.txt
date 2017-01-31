@@ -1,0 +1,423 @@
+
+slit 1.0
+========
+A simple command for basic sqlite data handling
+
+slit is a simple command to insert, delete, and extract data from basic 
+sqlite3 databases, following some minimum conventions and a unix-like,
+regular syntax that abstracts the user from the bore of dealing with 
+SQL for the most simple tasks.
+
+It aims to be one of those things that are deceptively simple upon
+first impression, leaving you wondering why would anyone ever write
+this thing, and also one of those things that you learn to appreciate 
+with time, every time you don't need to write scripts dealing with 
+sql for the most basic tasks.
+Try and get a json file with all your phone contacts from your 
+Mysql database. Yeah, I know.
+
+Install
+-------
+
+1) Install sqlite3 and support libraries
+
+    sudo apt-get install sqlite3 libsqlite3-dev
+
+
+2) Install Ruby, using RVM
+
+    gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
+
+    \curl -sSL https://get.rvm.io | bash -s stable --with-gems="trollop sqlite3"
+
+
+3) Place slit.rb and slit_commands.rb in the same directory
+   use the provided slit shell command to invoke slit.rb
+
+-------------------------------------------------------------------------
+
+Basic usage:
+------------
+
+slit is stateful. it stores its session state in a json 
+configuration file which usually resides in
+$HOME/.slit/slit.state
+
+The .slit directory and the configuration will be created
+upon first invoking the slit command.
+
+"Stateful" means that slit commands invoked from the 
+shell will take the state of the previously executed 
+slit command. It works this way so you can use it
+interactively if needed, without having to specify
+every necessary parameter all the time.
+That gives it a feel similar to a traditional 
+database CLI, but with the interesting characteristic
+that you can use it in combination with normal
+unix tools, doing all the things you would normally
+do in the traditional unix way.
+
+$ alias rfcdate='date "+%Y-%m-%d %H:%M:%S %z"'
+$ slit -t accesslog def name,lastname,area,lastvisit
+
+$ slit add Bruce,Wayne,Batcave,`rfcdate`
+$ slit add Dick,Grayson,Batcave,`rfcdate`
+$ slit get
++-----+--------+-------+-------------------------+
+|name |lastname| area  |        lastvisit        |
++-----+--------+-------+-------------------------+
+|Bruce|Wayne   |Batcave|2017-01-30 08:10:56-05:00|
+|Dick |Grayson |Batcave|2017-01-30 08:11:50-05:00|
++-----+--------+-------+-------------------------+
+
+# Now I'm going to get a a very important 
+# access report of people who entered the Batcave
+
+$  slit -f tab get / lastname,name,lastvisit | sort
+Grayson Dick  2017-01-30 08:11:50-05:00
+Wayne   Bruce 2017-01-30 08:10:56-05:00
+
+Of course, this is the most trivial example.
+
+It's the good bits of SQLite, minus sql,
+plus the good old unix way. The whole point.
+Of course it doesn't aim to be as powerful as
+sql is.  It aims to kill mosquitoes with a 
+swatter, not with a bazooka.
+
+But imagine you can combine slit with curl,
+and exiv2, your photo catalog, and your 
+toy drone, and connect that to a geolocation
+service to place your drone's photos on a map. 
+
+That's the unix way, assembling things using 
+a set of deceptively simple tools. 
+
+...................................................
+
+slit commands:
+
+new --- Creates a new database
+
+    The database is created in the default database 
+    directory if not specified otherwise.
+
+    Example: 
+
+    $ slit new mynewdb
+
+    $ slit new anotherdb
+
+
+use --- Selects an existing database for use
+    After this command is issued, all storage and retrieval
+    is done against the database in use
+
+    $ slit use mynewdb 
+
+
+tables --- Lists existing tables in a database
+
+    Example:
+
+    $ slit tables       # list all tables in the default database
+
+    $ slit tables t*    # list tables that match the pattern
+
+
+schema --- Display the structure of a table
+
+    $ slit tables
+
+    edges               # sample output
+    phonebook
+    slitdata
+
+    $ slit schema edges
+
+    Schema for table 'edges' in database 'database'
+
+    No. Column          Type
+    === =============== ==========
+      0 source          number
+      1 target          number
+      2 label           string
+
+
+def --- Defines columns for use in the current database
+
+    When a database is created, it doesn't contain any
+    tables or fields. This command defines columns for us
+    in the default table, in the current database in use.
+
+    Example:
+
+    $ slit new contacts
+    $ slit def name,lastname,email
+
+    You may also specify the data type for some cases
+    that require it.
+
+    $ slit new tweets
+    $ slit def userid:number,username:string,tweet:text
+
+
+add --- Adds a new row. Fields must match previously defined columns
+    
+    Once a database has been initialised and some fields have
+    been defined, you can start adding rows of data to it
+
+    $ slit use contacts
+    $ slit add Jason,Crawford,jasonc@trump-pence.com
+
+
+set --- Updates data of an existing row or rows in a table
+    
+    Syntax:
+
+    slit set <lookupfield>=<value> / <field1>=<v1>[,<field2>=<v2>,...]
+
+    IMPORTANT: In slit, the convention is that the lookup field
+    (the field you use to look up for data in a table) always goes first.
+    Then the / separator, indicating that a list of parameters follows,
+    and then the parameters. 
+
+    Examples:
+
+    - Update the field username for a given user id.
+
+    $ slit set uid=123456 / username=jason
+
+    - Update more than one field
+
+    $ slit set uid=123456 / username=jason,password=masterkey
+    
+
+row --- Fetch a row, takes a row number as parameter
+
+    We have only added one row, it should be row number one
+
+    $ slit row 1
+    
+
+del --- Delete a row, specifying its row number
+
+    Let's define a table and add some data to it.
+
+    $ slit -t artists def id,name,lastname
+    
+    $ slit add 1,Jason,    C.
+    $ slit add 2,Richard,  Wagner
+    $ slit add 3,Giuseppe, Verdi
+    $ slit add 4,Wolfgang A., Mozart 
+    $ slit add 5,Richard,  Linklater
+
+    $ slit del 1  # Jason is gone, only artists remain
+
+
+get --- Query data by field.
+
+    IMPORTANT: In slit, the convention is that the lookup field
+    (the field you use to look up for data in a table) always goes first.
+    Then the / separator, indicating that a list of parameters follows,
+    and then the parameters. 
+
+    Syntax:
+
+    slit get <lookupfield>=<value>  # fetch rows that match
+
+    slit get <lookupfield>=<value> [ / <fieldlist> ]
+    
+    - Fetch Mozart's row
+
+    $ slit get lastname=Mozart
+
+
+    - Fetch all artists named Richard
+
+    $ slit get name=Richard   # You should get Wagner and Linklater
+
+
+    - If you want the output to be in json format:
+
+    $ slit -f json get name=Richard
+
+    $ slit -f ascii get name=Richard # back to ascii art display
+
+    - By default and if not specified otherwise, slit retrieves all
+    fields for any given row. It also supports specific syntax to
+    retrieve only the fields needed.
+
+    Example:
+    
+    Lookup by username field, retrieve data for just two specific
+    columns. 
+
+    $ slit get username=jasonc / username,password
+    > +--------+----------+
+    > |username| password |
+    > +--------+----------+
+    > |jasonc  |ilovetrump|
+    > +--------+----------+
+
+    If you specify neither a lookup clause, nor a field list,
+    the command slit get will dump the entire contents of the table.
+
+    $ slit get
+
+    > <<outputs full dump>>
+
+    If you don't specify a lookup clause but you specify some
+    columns, you will get a full dump, but only for the fields
+    specified:
+
+    $ slit get / uid,username
+    > +------+--------+
+    > | uid  |username|
+    > +------+--------+
+    > |123456|vruz    |
+    > |234567|jasonc  |
+    > |345678|wwelna  |
+    > +------+--------+
+
+    If you need to perform the simplest possible function of
+    a look up table, given a uid return only the username:
+ 
+    First ensure that the slit state doesn't output rubbish.
+
+    $ slit -f csv --no-rownumbers --no-columnlabels state
+
+    Then:
+
+    $ slit get uid=123456 / username  # simple as!
+    > vruz
+
+    List of slit get output formats:
+
+    - json: Javascript-like serialised objects, in the format:
+            { "key1" : value1, "key2" : value2 ... } 
+
+            (exceptions apply, see: www.json.org)
+
+    - csv:  Comma delimited, very popular data exchange format.
+            One line of text output per row of data.
+            Fields are separated by commas.
+
+    - tab:  Tab-separated fields. 
+            One line of text output per row of data.
+            Fields are separated by a tab character (0x09, a.k.a. \t)
+
+    - txt:  A trivial text format. 
+            One line per cell of data.
+            Every output line has the format:  <fieldname>: <value>
+            If you need the values only, you can make the field
+            label be omitted specifying the option --no-columnlabels
+
+    - ascii ASCII art tables meant for screen visualisation.
+            +--+-----------+---------+
+            |id|   name    |lastname |
+            +--+-----------+---------+
+            | 1|Wolfgang A.|Mozart   |
+            | 2|Giuseppe.  |Verdi    |
+            | 3|Richard    |Wagner   |
+            | 4|Richard    |Linklater|
+            +--+-----------+---------+
+
+
+state -- Prints relevant session configuration data
+       
+    Can be used to update settings without taking
+    any specific action, only displaying settings.
+
+    $ slit -f csv state # Change default output format
+                        # to csv, display status,
+                        # do nothing else.
+
+
+General notes:
+
+  o Because slit is stateful, you don't need to specify the json 
+    format again the next time you use it, it will remember the 
+    last options used.
+
+  o Output formats available are:  txt, ascii, json, and csv.
+    The txt format generates one row per field.
+    If the --columnlabels options is set when using the csv or
+    ascii formats, it will output a row with the field names
+    as column labels. If --columnlabels is enabled when using
+    the txt output format, it will display data in the
+    format:  <fieldname>: <fieldvalue>
+
+  o When using the "slit dbs" command, search patterns involving 
+    the wildcard * may not work on many unices due to globbing. 
+    If the user needs to do this, the pattern must be specified 
+    between quotes like:  slit dbs "backup_number_*", or disabling
+    shell globbing. See: http://bit.ly/2khNoGC
+
+  o What does 'slit' mean? 
+    It's vaguely evoking of the unix 'cut' command but lighter 
+    and focused on SQLite databases. It's also a bit like the 
+    word 'sqlite' but simpler because it has less letters in it. 
+    There's also no 'sql' in the word slit.
+    We like SQLite. We don't like sql.
+
+
+........................................................................
+
+
+Usage:
+    slit [options] command <parameters>
+
+Available commands:
+    new use dbs tables schema def add get set del row state
+
+
+slit new <database>            # create new database
+slit use <database>            # use existing database
+slit tables [pattern]          # list tables in database
+slit schema [tablename]        # list structure of a table
+slit def <col1>[,col2,col3]    # define table columns
+slit def <name:string>[,phone:number,notes:text]
+
+slit get <lookupfield>=<value> # fetch rows that match
+slit get <lookupfield>=<value> [ / <fieldlist> ]
+slit row <rownumber>           # fetch one row
+
+slit add <data1>[,data2,data3] # add data to table    
+slit set <lookupfield>=<value> / <field1>=<v1>[,<field2>=<v2>,...]
+
+slit del <rownumber>           # delete a row 
+
+[options] are:
+  -p, --path=<s>       Directory path where the database resides (default: $HOME/.slit)
+  -t, --table=<s>      Table name where data is stored (default: slitdata)
+  -f, --format=<s>     Output data format. One of: [txt|json|csv] (default: txt)
+  -c, --columnlabels   Output column labels in CSV and txt formats
+  -r, --rownumber      Output row numbers for every row
+  -m, --maxrows=<i>    Maximum number of rows to output (default: 20)
+  -q, --query          Display query that is being executed
+  -v, --version        Print version and exit
+  -h, --help           Show this message
+
+
+TO-DO:
+
+ - more ddl ops (alter, drop table. delete with lookup)
+
+ - multiple sessions (keep multiple states, tool switching them)
+
+ - more complex queries (slit get with AND and OR operators,
+   nested expressions, and functions)
+
+ - aggregate functions (max, min, avg, count)
+
+ - batch mode, perhaps scriptable to speed up operations.
+   may be good in cases of heavy data massaging.
+
+ - service/daemon mode for potential use from small 
+   intranet web applications.
+
+ - coding style (maybe somebody can volunteer to clean up
+   a bit. I favour readability over hacking acrobatics,
+   I favour readability over extreme idiomatics, 
+   I favour Ruby over Rails)
