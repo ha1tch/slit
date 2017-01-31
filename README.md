@@ -1,5 +1,6 @@
 # slit
-A trivial tool for trivial SQLite3 tasks
+## A trivial tool for trivial SQLite3 tasks
+
 A simple command for basic sqlite data handling
 
 slit is a simple command to insert, delete, and extract data from basic 
