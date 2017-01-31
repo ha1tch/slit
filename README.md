@@ -36,7 +36,6 @@ https://raw.githubusercontent.com/vruz/slit/master/slitdoc.txt
     slit set <lookupfield>=<value> / <field1>=<v1>[,<field2>=<v2>,...]
 
     slit del <rownumber>           # delete a row 
-    slit del <lookupfield>=<value>
 
     Options: 
 
